@@ -14,4 +14,13 @@ struct hash1 {
     }
 };
 
+template<class Val, class Hash = std::hash<Val>>
+void printHT(const hash_table<Val, Hash> &ht, std::ostream &os) {
+    Hash hash;
+    std::for_each(ht.begin(), ht.end(), [&os, hash](Val i) {
+        os << "value: " << i << " hash: " << hash(i) << std::endl;
+    });
+    return;
+};
+
 #endif //HASH_TABLE_HASH_TABLE_UTILS_H

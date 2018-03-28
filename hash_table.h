@@ -18,35 +18,52 @@ template <class Key, class Hash = std::hash<Key>> class hash_table {
     Hash hash;
     using node = _Hashtable_node *;
     std::vector<node> _vec;
-    unsigned int _size;
-    unsigned int _max_size;
+    size_t _size;
+    size_t _max_size;
+    typename std::vector<node>::const_iterator _first;
 
 public:
     class const_iterator : public std::iterator<std::bidirectional_iterator_tag, Key> {
     public:
         using node = _Hashtable_node *;
+        typename std::vector<node>::const_iterator iter;
         node ptr;
         const hash_table *ht;
-        const_iterator(node x, const hash_table *y) : ptr(x), ht(y) {}
-        const_iterator(const const_iterator &mit) : ptr(mit.ptr) {}
+
+        const_iterator(typename std::vector<node>::const_iterator i, node x, const hash_table *y) : iter(i), ptr(x),
+                                                                                                    ht(y) {}
+
+        const_iterator(const const_iterator &mit) : iter(mit.iter), ptr(mit.ptr), ht(mit.ht) {}
         const_iterator &operator++() {
             if (ptr->_next)
                 ptr = ptr->_next;
             else {
-                unsigned int index = ht->hash(ptr->_key) + 1;
-                ptr = ht->_vec[index];
-                while (index < 2000 && !ptr)
-                    ptr = ht->_vec[++index];
+                ++iter;
+                if (iter == ht->_vec.end()) {
+                    ptr = nullptr;
+                    return *this;
+                }
+                while (*iter == nullptr)
+                    if (iter == ht->_vec.end()) {
+                        ptr = nullptr;
+                        return *this;
+                    } else
+                        ++iter;
+                ptr = *iter;
             }
             return *this;
         }
         const_iterator &operator--() {
-            unsigned int index = ht->hash(ptr->_key);
-            if (ptr == ht->_vec[index])
-                while (index > 0 && !ptr)
-                    ptr = ht->_vec[--index];
+            if (ptr == *iter) {
+                --iter;
+                while (*iter == nullptr)
+                    --iter;
+                ptr = *iter;
+                while (ptr->_next)
+                    ptr = ptr->_next;
+            }
             else {
-                node temp = ht->_vec[index];
+                node temp = *iter;
                 while (temp->_next != ptr)
                     temp = temp->_next;
                 ptr = temp;
@@ -64,7 +81,8 @@ public:
             return tmp;
         }
         bool operator==(const const_iterator &rhs) const { return ptr == rhs.ptr; }
-        bool operator!=(const const_iterator &rhs) const { return ptr != rhs.ptr; }
+
+        bool operator!=(const const_iterator &rhs) const { return !this->operator==(rhs); }
 
         const Key &operator*() {
             node q = this->ptr;
@@ -73,42 +91,62 @@ public:
         }
     };
 
-    hash_table() : _size(0), _max_size(2000), _vec(2000, nullptr) {}
-    unsigned int size() const {
+    explicit hash_table(size_t ms = 2000) : _size(0), _max_size(ms), _vec(ms, nullptr), _first(_vec.end()) {}
+
+    size_t size() const {
         return _size;
     }
     bool empty() const {
         return _size == 0;
     }
     const_iterator find(const Key &k) const {
-        return const_iterator(_vec[hash(k)], this);
+        return const_iterator(_vec.begin() + hash(k), _vec[hash(k)], this);
     }
-    void erase(const_iterator pos) {
-        delete pos.ptr;
-        --_size;
-        return;
+
+    const_iterator erase(const_iterator pos) {
+        node tmp = *(pos.iter);
+        if (pos.iter == _first)
+            while (*_first == nullptr)
+                ++_first;
+        if (tmp == pos.ptr) {
+            _vec[pos.ht->hash(tmp->_key)] = pos.ptr->_next;
+            delete pos.ptr;
+            --_size;
+            return const_iterator(pos.iter, *pos.iter, this);
+        } else {
+            while (tmp->_next != pos.ptr)
+                tmp = tmp->_next;
+            tmp->_next = pos.ptr->_next;
+            delete pos.ptr;
+            --_size;
+            return const_iterator(pos.iter, *pos.iter, this);
+        }
     }
-    void erase(const Key &k) {
+
+    size_t erase(const Key &k) {
         const_iterator it = find(k);
-        if (it != end())
+        if (it != end()) {
             erase(it);
+            return 1;
+        }
         else
-            return;
+            return 0;
     }
     const_iterator insert(const Key &k) {
         if (_size < _max_size) {
             _vec[hash(k)] = new _Hashtable_node(_vec[hash(k)], k);
             ++_size;
-            return const_iterator(_vec[hash(k)], this);
+            if (_vec.begin() + hash(k) < _first)
+                _first = _vec.begin() + hash(k);
+            return const_iterator(_vec.begin() + hash(k), _vec[hash(k)], this);
         } else
             return end();
     }
     const_iterator begin() const {
-        return const_iterator(*_vec.begin(), this);
+        return const_iterator(_first, *_first, this);
     }
     const_iterator end() const {
-        //TODO FIX
-        return const_iterator(nullptr, this);
+        return const_iterator(_vec.end(), nullptr, this);
     }
 };
 
