@@ -18,7 +18,7 @@ template<class Val, class Hash = std::hash<Val>>
 void printHT(const hash_table<Val, Hash> &ht, std::ostream &os) {
     Hash hash;
     std::for_each(ht.begin(), ht.end(), [&os, hash](Val i) {
-        os << "value: " << i << " hash: " << hash(i) << std::endl;
+        os << "value: " << i << " hash: " << hash(i) << " index: " << hash(i) % 1999 << std::endl;
     });
     return;
 };

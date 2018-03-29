@@ -15,7 +15,10 @@ template <class Key, class Hash = std::hash<Key>> class hash_table {
         _Hashtable_node(_Hashtable_node *_n, Key _k) : _next(_n), _key(_k) {}
     };
 
-    Hash hash;
+    Hash hash5;
+    int hash (Key i) const {
+        return hash5(i) % 2000;
+    }
     using node = _Hashtable_node *;
     std::vector<node> _vec;
     size_t _size;
